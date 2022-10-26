@@ -4,17 +4,17 @@ pragma solidity 0.8.16;
 
 contract SmartContractWallet {
     
-    address walletOwner;
+    address payable walletOwner;
     mapping (address => uint) public allowances;
     mapping (address => bool) public isAllowedToSend;
 
-    mapping(address => bool) public guardian;
+    mapping(address => bool) public guardians;
     address payable nextOwner;
     uint8 guardiansResetCount;
     uint8 public constant confirmationsFromGuardiansForReset = 3;
     
     constructor() {
-        walletOwner = msg.sender;
+        walletOwner = payable(msg.sender);
     }
     
     receive() external payable {}
@@ -28,12 +28,12 @@ contract SmartContractWallet {
         }   
 
         (bool success, bytes memory returnData) = to.call{value: amount}(payload);
-        require(success == true, "Transfer was unsuccessful");
+        require(success == true, "Transaction was unsuccessful");
         return returnData;
     }
 
     function setAllowances(uint amount, address to) public {
-        require(msg.sender == walletOwner, "Only the wlalet owner can change allowances");
+        require(msg.sender == walletOwner, "Only the wallet owner can change allowances");
         allowances[to] = amount;
 
         if (amount > 0 ) {
@@ -44,7 +44,7 @@ contract SmartContractWallet {
     }
 
     function proposeNewOwner(address payable newOwner) public {
-        require(guardian[msg.sender], "You are no guardian, aborting");
+        require(guardians[msg.sender], "You are not a guardian");
         if(nextOwner != newOwner) {
             nextOwner = newOwner;
             guardiansResetCount = 0;
@@ -57,5 +57,11 @@ contract SmartContractWallet {
             nextOwner = payable(address(0));
         }
     }
+
+    function setGuardians(address guardian, bool isGuardian) public {
+        require(msg.sender == walletOwner, "Only the wallet owner can set guardians");
+        guardians[guardian] = isGuardian;
+    }
+
 
 }
